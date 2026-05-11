@@ -5,7 +5,7 @@
  */
 
 const router = require('express').Router();
-const pool   = require('../config/pool');
+const pool = require('../config/pool');
 const { authenticate, requireAdmin } = require('../middlewares/auth.middleware');
 
 const VALID_TYPES = ['categories', 'subjects', 'publishers', 'languages'];
@@ -17,34 +17,49 @@ function guardType(req, res, next) {
   next();
 }
 
-// GET /api/lookups/categories
-// GET /api/lookups/subjects
-// GET /api/lookups/publishers
-// GET /api/lookups/languages
+// GET /api/lookups/categories  (or /subjects, /publishers, /languages)
 router.get('/:type', authenticate, guardType, async (req, res, next) => {
   try {
-    const { q } = req.query;
+    const { q, page, limit } = req.query;
     const t = req.params.type;
-    let query, params = [];
+    const conditions = [];
+    const params = [];
+    let idx = 1;
 
-    if (t === 'subjects') {
-      query = q
-        ? `SELECT * FROM subjects WHERE name ILIKE $1 ORDER BY name`
-        : `SELECT * FROM subjects ORDER BY name`;
-      if (q) params.push(`%${q}%`);
-    } else if (t === 'publishers') {
-      query = q
-        ? `SELECT * FROM publishers WHERE name ILIKE $1 ORDER BY name`
-        : `SELECT * FROM publishers ORDER BY name`;
-      if (q) params.push(`%${q}%`);
-    } else {
-      query = q
-        ? `SELECT * FROM ${t} WHERE name ILIKE $1 ORDER BY name`
-        : `SELECT * FROM ${t} ORDER BY name`;
-      if (q) params.push(`%${q}%`);
+    if (q) {
+      conditions.push(`name ILIKE $${idx}`);
+      params.push(`%${q}%`);
+      idx++;
     }
 
-    const { rows } = await pool.query(query, params);
+    const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+
+    // If pagination is requested, return an object with total and data
+    if (page || limit) {
+      const pageNum = Math.max(1, parseInt(page) || 1);
+      const limitNum = Math.min(100, parseInt(limit) || 10); // default 10, max 100
+      const offset = (pageNum - 1) * limitNum;
+
+      const countRes = await pool.query(
+        `SELECT COUNT(*) FROM ${t} ${where}`,
+        params
+      );
+      const total = parseInt(countRes.rows[0].count);
+
+      const dataRes = await pool.query(
+        `SELECT * FROM ${t} ${where} ORDER BY name
+         LIMIT $${idx} OFFSET $${idx + 1}`,
+        [...params, limitNum, offset]
+      );
+
+      return res.json({ total, page: pageNum, limit: limitNum, data: dataRes.rows });
+    }
+
+    // No pagination – return flat array (backward‑compatible)
+    const { rows } = await pool.query(
+      `SELECT * FROM ${t} ${where} ORDER BY name`,
+      params
+    );
     res.json(rows);
   } catch (err) { next(err); }
 });
@@ -60,7 +75,7 @@ router.get('/:type/:id', authenticate, guardType, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// POST /api/lookups/:type
+// POST /api/lookups/:type   (admin only)
 router.post('/:type', authenticate, requireAdmin, guardType, async (req, res, next) => {
   try {
     const t = req.params.type;
@@ -92,7 +107,7 @@ router.post('/:type', authenticate, requireAdmin, guardType, async (req, res, ne
   } catch (err) { next(err); }
 });
 
-// PUT /api/lookups/:type/:id
+// PUT /api/lookups/:type/:id   (admin only)
 router.put('/:type/:id', authenticate, requireAdmin, guardType, async (req, res, next) => {
   try {
     const t = req.params.type;

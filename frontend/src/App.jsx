@@ -12,6 +12,7 @@ import Authors from './features/authors/Authors';
 import Translators from './features/translators/Translators';
 import Publishers from './features/publishers/Publishers';
 import UsersPage from './features/users/Users';
+import Subjects from './features/subjects/Subjects';
 
 function App() {
   const { user } = useUser();
@@ -49,6 +50,7 @@ function App() {
             <Route path="/translators" element={<ProtectedRoute><Translators /></ProtectedRoute>} />
             <Route path="/publishers" element={<ProtectedRoute><Publishers /></ProtectedRoute>} />
             <Route path="/users" element={<ProtectedRoute requireAdmin><UsersPage /></ProtectedRoute>} />
+            <Route path="/subjects" element={<ProtectedRoute><Subjects /></ProtectedRoute>} />
 
             {/* Fallback */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />

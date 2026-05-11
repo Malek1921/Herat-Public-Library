@@ -95,12 +95,8 @@ const TranslatorsList = ({ onEdit }) => {
                   <td className="px-6 py-4 text-gray-600">{t.book_count}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <button onClick={() => handleEdit(t)} className="text-blue-600 hover:text-blue-800 transition" title="ویرایش">
-                        <FaEdit size={16} />
-                      </button>
-                      <button onClick={() => handleDelete(t.id)} className="text-red-500 hover:text-red-700 transition" title="حذف">
-                        <FaTrashAlt size={16} />
-                      </button>
+                      <button onClick={() => handleEdit(t)} className="text-blue-600 hover:underline ml-3">ویرایش</button>
+                      <button onClick={() => handleDelete(t.id)} className="text-red-600 hover:underline">حذف</button>
                     </div>
                   </td>
                 </tr>

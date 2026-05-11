@@ -74,9 +74,7 @@ const UsersList = ({ onEdit }) => {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <button onClick={() => handleEdit(u)} className="text-blue-600 hover:text-blue-800 transition" title="ویرایش">
-                      <FaEdit size={16} />
-                    </button>
+                    <button onClick={() => handleEdit(u)} className="text-blue-600 hover:underline ml-3">ویرایش</button>
                   </td>
                 </tr>
               ))}

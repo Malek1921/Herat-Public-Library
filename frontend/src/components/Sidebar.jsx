@@ -11,6 +11,7 @@ import {
     LogOut,
     ChevronLeft,
     ChevronRight,
+    Tags
 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'react-toastify';
@@ -35,6 +36,8 @@ export function Sidebar() {
         { label: 'مترجمان', path: '/translators', icon: Languages },
         { label: 'ناشران', path: '/publishers', icon: Building2 },
         { label: 'کاربران', path: '/users', icon: UserPlus },
+        { label: 'موضوعات', path: '/subjects', icon: Tags },
+
     ];
 
     const isActive = (path) => location.pathname === path;
@@ -70,8 +73,8 @@ export function Sidebar() {
                             <Link
                                 to={link.path}
                                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition ${isActive(link.path)
-                                        ? 'bg-blue-50 text-blue-600 font-medium'
-                                        : 'text-gray-600 hover:bg-gray-100'
+                                    ? 'bg-blue-50 text-blue-600 font-medium'
+                                    : 'text-gray-600 hover:bg-gray-100'
                                     }`}
                             >
                                 <link.icon size={20} />
