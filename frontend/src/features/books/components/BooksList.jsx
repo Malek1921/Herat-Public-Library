@@ -1,197 +1,237 @@
-import { useEffect, useState } from 'react';
-import { booksAPI, lookupsAPI } from '../../../services/endpoints';
-import { useEdit } from '../../store/useEdit';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
-import { Trash2, Edit, Search } from 'lucide-react';
+import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import api from '../../../services/api';
+import { useEdit } from '../../store/useEdit';
+import BookDetail from './BookDetail';
 
-export function BooksList({ setTab }) {
+const BooksList = ({ onEdit }) => {
   const [books, setBooks] = useState([]);
-  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
+  const [limit] = useState(10);
+  const [query, setQuery] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [subjectId, setSubjectId] = useState('');
+
+  const [expandedId, setExpandedId] = useState(null);
+  const [bookDetail, setBookDetail] = useState(null);
+  const [copies, setCopies] = useState([]);
+
+  const setEditing = useEdit((s) => s.setEditing);
+
   const [categories, setCategories] = useState([]);
-  const { setEditing } = useEdit();
+  const [subjects, setSubjects] = useState([]);
 
-  const limit = 10;
-
-  // Load books
   useEffect(() => {
-    const loadBooks = async () => {
-      setLoading(true);
+    const fetchLookups = async () => {
       try {
-        const params = {
-          page,
-          limit,
-          q: search || undefined,
-          category_id: categoryFilter || undefined,
-        };
-        const response = await booksAPI.getBooks(params);
-        setBooks(response.data.data || []);
-        setTotal(response.data.total || 0);
-      } catch (err) {
-        toast.error('❌ خطا در دریافت کتاب‌ها');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
+        const [catRes, subRes] = await Promise.all([
+          api.get('/lookups/categories'),
+          api.get('/lookups/subjects'),
+        ]);
+        setCategories(catRes.data);
+        setSubjects(subRes.data);
+      } catch { }
     };
-
-    const timer = setTimeout(loadBooks, 300);
-    return () => clearTimeout(timer);
-  }, [page, search, categoryFilter]);
-
-  // Load categories
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const response = await lookupsAPI.getLookupsBy('categories', { limit: 100 });
-        setCategories(response.data || []);
-      } catch (err) {
-        console.error('Error loading categories:', err);
-      }
-    };
-    loadCategories();
+    fetchLookups();
   }, []);
 
-  const handleDelete = async (id) => {
-    if (window.confirm('آیا مطمئن هستید که می‌خواهید این کتاب را حذف کنید؟')) {
+  const fetchBooks = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = { page, limit };
+      if (query) params.q = query;
+      if (categoryId) params.category_id = categoryId;
+      if (subjectId) params.subject_id = subjectId;
+
+      const res = await api.get('/books', { params });
+      setBooks(res.data.data);
+      setTotal(res.data.total);
+    } catch {
+      toast.error('خطا در بارگذاری کتاب‌ها');
+    } finally {
+      setLoading(false);
+    }
+  }, [page, limit, query, categoryId, subjectId]);
+
+  useEffect(() => {
+    fetchBooks();
+  }, [fetchBooks]);
+
+  const handleToggleExpand = async (book) => {
+    if (expandedId === book.id) {
+      setExpandedId(null);
+      setBookDetail(null);
+      setCopies([]);
+    } else {
+      setExpandedId(book.id);
       try {
-        await booksAPI.deleteBook(id);
-        toast.success('✅ کتاب با موفقیت حذف شد');
-        setBooks(books.filter((b) => b.id !== id));
-      } catch (err) {
-        toast.error('❌ خطا در حذف کتاب');
+        const [detailRes, copiesRes] = await Promise.all([
+          api.get(`/books/${book.id}`),
+          api.get(`/books/${book.id}/copies`),
+        ]);
+        setBookDetail(detailRes.data);
+        setCopies(copiesRes.data);
+      } catch {
+        toast.error('خطا در دریافت جزئیات کتاب');
+        setExpandedId(null);
       }
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('آیا از حذف این کتاب اطمینان دارید؟')) return;
+    try {
+      await api.delete(`/books/${id}`);
+      toast.success('کتاب حذف شد');
+      fetchBooks();
+    } catch {
+      toast.error('خطا در حذف کتاب');
     }
   };
 
   const handleEdit = (book) => {
     setEditing(book, 'book');
-    setTab('edit');
+    onEdit();
   };
 
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <div className="space-y-4">
-      {/* Search & Filter */}
-      <div className="flex gap-3 flex-wrap">
-        <div className="flex-1 min-w-[200px] relative">
-          <Search className="absolute right-3 top-3 text-gray-400" size={18} />
+    <div className="space-y-4 max-w-full">
+      {/* Search & Filters */}
+      <div className="flex flex-wrap gap-3 items-end">
+        <div className="flex-1 min-w-[200px]">
+          <label className="block text-sm text-gray-600 mb-1">جستجو</label>
           <input
             type="text"
-            placeholder="جستجو در عنوان یا شابک..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={query}
+            onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+            placeholder="عنوان، شابک..."
+            className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
           />
         </div>
-
-        <select
-          value={categoryFilter}
-          onChange={(e) => {
-            setCategoryFilter(e.target.value);
-            setPage(1);
-          }}
-          className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <div className="w-48">
+          <label className="block text-sm text-gray-600 mb-1">دسته‌بندی</label>
+          <select
+            value={categoryId}
+            onChange={(e) => { setCategoryId(e.target.value); setPage(1); }}
+            className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-100"
+          >
+            <option value="">همه</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="w-48">
+          <label className="block text-sm text-gray-600 mb-1">موضوع</label>
+          <select
+            value={subjectId}
+            onChange={(e) => { setSubjectId(e.target.value); setPage(1); }}
+            className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-100"
+          >
+            <option value="">همه</option>
+            {subjects.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        </div>
+        <button
+          onClick={() => { setQuery(''); setCategoryId(''); setSubjectId(''); setPage(1); }}
+          className="px-4 py-2 bg-gray-100 rounded-lg text-gray-600 hover:bg-gray-200 transition"
         >
-          <option value="">-- همه دسته‌بندی‌ها --</option>
-          {categories.map((cat) => (
-            <option key={cat.id} value={cat.id}>
-              {cat.name}
-            </option>
-          ))}
-        </select>
+          پاک کردن
+        </button>
       </div>
 
       {/* Table */}
-      {loading ? (
-        <div className="text-center py-8">
-          <p className="text-gray-600">⏳ در حال بارگذاری...</p>
-        </div>
-      ) : books.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-gray-600">❌ کتابی یافت نشد</p>
-        </div>
-      ) : (
-        <>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-gray-50">
-                  <th className="px-4 py-3 text-right font-medium">عنوان</th>
-                  <th className="px-4 py-3 text-right font-medium">نویسنده</th>
-                  <th className="px-4 py-3 text-right font-medium">دسته‌بندی</th>
-                  <th className="px-4 py-3 text-right font-medium">قیمت</th>
-                  <th className="px-4 py-3 text-right font-medium">عملیات</th>
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 text-gray-600 text-xs font-semibold uppercase">
+                <th className="text-right px-6 py-3">عنوان</th>
+                <th className="text-right px-6 py-3">نویسنده(ها)</th>
+                <th className="text-right px-6 py-3">ناشر</th>
+                <th className="text-right px-6 py-3">سال</th>
+                <th className="text-right px-6 py-3">نسخه‌ها</th>
+                <th className="text-right px-6 py-3">عملیات</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {loading && (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-gray-400">در حال بارگذاری...</td>
                 </tr>
-              </thead>
-              <tbody>
-                {books.map((book) => (
-                  <tr key={book.id} className="border-b hover:bg-gray-50">
-                    <td className="px-4 py-3">{book.title}</td>
-                    <td className="px-4 py-3">
-                      {book.authors?.length > 0
-                        ? book.authors.join(', ')
-                        : '-'}
-                    </td>
-                    <td className="px-4 py-3">{book.category || '-'}</td>
-                    <td className="px-4 py-3">{book.unit_price || '-'}</td>
-                    <td className="px-4 py-3 flex gap-2">
-                      <button
-                        onClick={() => handleEdit(book)}
-
-                        className="flex items-center gap-1 bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-xs transition"
-                      >
-                        <Edit size={14} />
-                        ویرایش
-                      </button>
-                      <button
-                        onClick={() => handleDelete(book.id)}
-                        className="flex items-center gap-1 bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs transition"
-                      >
-                        <Trash2 size={14} />
-                        حذف
-                      </button>
+              )}
+              {!loading && books.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-gray-400">کتابی یافت نشد.</td>
+                </tr>
+              )}
+              {books.map((book) => (
+                <>
+                  <tr
+                    key={book.id}
+                    className="cursor-pointer hover:bg-gray-50 transition-colors"
+                    onClick={() => handleToggleExpand(book)}
+                  >
+                    <td className="px-6 py-4 font-medium text-gray-800">{book.title}</td>
+                    <td className="px-6 py-4 text-gray-600">{book.authors?.join('، ') ?? '-'}</td>
+                    <td className="px-6 py-4 text-gray-600">{book.publisher ?? '-'}</td>
+                    <td className="px-6 py-4 text-gray-600">{book.publication_year ?? '-'}</td>
+                    <td className="px-6 py-4 text-gray-600">{book.copy_count}</td>
+                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => handleEdit(book)} className="text-blue-600 hover:text-blue-800 transition" title="ویرایش">
+                          <FaEdit size={16} />
+                        </button>
+                        <button onClick={() => handleDelete(book.id)} className="text-red-500 hover:text-red-700 transition" title="حذف">
+                          <FaTrashAlt size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                  {expandedId === book.id && bookDetail && (
+                    <tr key={`expanded-${book.id}`}>
+                      <td colSpan={6} className="bg-gray-50 p-4">
+                        <BookDetail book={bookDetail} copies={copies} />
+                      </td>
+                    </tr>
+                  )}
+                </>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-          {/* Pagination */}
-          <div className="flex justify-between items-center pt-4">
-            <div className="text-sm text-gray-600">
-              {total} کتاب از {(page - 1) * limit + 1} تا {Math.min(page * limit, total)}
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPage(Math.max(1, page - 1))}
-                disabled={page === 1}
-                className="px-3 py-1 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-              >
-                قبلی
-              </button>
-              <span className="px-3 py-1">
-                صفحه {page} از {totalPages}
-              </span>
-              <button
-                onClick={() => setPage(Math.min(totalPages, page + 1))}
-                disabled={page === totalPages}
-                className="px-3 py-1 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-              >
-                بعدی
-              </button>
-            </div>
+        {/* Pagination */}
+        <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100">
+          <span className="text-sm text-gray-500">مجموع: {total} کتاب</span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1 border border-gray-300 rounded-lg text-sm disabled:opacity-50 hover:bg-gray-50"
+            >
+              قبلی
+            </button>
+            <span className="px-3 py-1 text-sm">{page} / {totalPages || 1}</span>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page >= totalPages}
+              className="px-3 py-1 border border-gray-300 rounded-lg text-sm disabled:opacity-50 hover:bg-gray-50"
+            >
+              بعدی
+            </button>
           </div>
-        </>
-      )}
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default BooksList;

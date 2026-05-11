@@ -4,14 +4,15 @@ export default {
         "./src/**/*.{js,jsx}",
     ],
     theme: {
-        extend: {
+        extend: {                          // ← important: extend, not replace
             colors: {
                 primary: '#3b82f6',
                 secondary: '#10b981',
                 danger: '#ef4444',
             },
             fontFamily: {
-                'vazir': ['Vazirmatn', 'Segoe UI', 'Tahoma', sans - serif],
+                // Your custom Persian font – note the quotes around 'sans-serif'
+                'vazir': ['Vazirmatn', 'Segoe UI', 'Tahoma', 'sans-serif'],
             },
         },
     },

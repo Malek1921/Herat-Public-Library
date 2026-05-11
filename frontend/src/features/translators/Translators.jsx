@@ -1,44 +1,44 @@
-import React, { useState } from "react";
-import EditTranslator from "./components/EditTranslator";
-import TranslatorsList from "./components/TranslatorsList";
-import AddTranslator from "./components/AddTranslator";
+import { useState } from 'react';
+import TranslatorsList from './components/TranslatorsList';
+import AddTranslator from './components/AddTranslator';
+import EditTranslator from './components/EditTranslator';
 
-function Authors() {
-  const [activeTab, setActiveTab] = useState("list");
-
-  const tabs = [
-    { id: "list", label: "List" },
-    { id: "add", label: "Add" },
-    { id: "edit", label: "Edit" },
-  ];
+const Translators = () => {
+  const [activeTab, setActiveTab] = useState('list');
 
   return (
-    <div className=" bg-gray-100">
-      {/* Tabs */}
-      <div className="flex space-x-2 border-b border-gray-300 mb-4">
-        {tabs.map((tab) => (
+    <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-800">مترجمان</h1>
+        <p className="text-gray-500 mt-1">مدیریت مترجمان کتابخانه</p>
+      </div>
+
+      <div className="flex gap-2 border-b border-gray-200">
+        {[
+          { key: 'list', label: 'لیست مترجمان' },
+          { key: 'add', label: 'افزودن مترجم' },
+          { key: 'edit', label: 'ویرایش مترجم' },
+        ].map((tab) => (
           <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 font-medium rounded-t-md transition ${
-              activeTab === tab.id
-                ? "bg-white border-t border-l border-r border-gray-300 text-gray-900"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`px-4 py-2.5 text-sm font-medium transition border-b-2 ${activeTab === tab.key
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-      {/* Tab Content */}
-      <div className="p-4 bg-white border border-gray-300 rounded-b-md shadow-sm">
-        {activeTab === "add" && <AddTranslator />}
-        {activeTab === "edit" && <EditTranslator />}
-        {activeTab === "list" && <TranslatorsList />}
+      <div>
+        {activeTab === 'list' && <TranslatorsList onEdit={() => setActiveTab('edit')} />}
+        {activeTab === 'add' && <AddTranslator onSuccess={() => setActiveTab('list')} />}
+        {activeTab === 'edit' && <EditTranslator onSuccess={() => setActiveTab('list')} />}
       </div>
     </div>
   );
-}
+};
 
-export default Authors;
+export default Translators;

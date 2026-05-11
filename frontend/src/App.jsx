@@ -3,19 +3,15 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Auth } from './features/auth/Auth';
 import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
-import { Navbar } from './components/Navbar';
+import { Sidebar } from './components/Sidebar';
 import { useUser } from './features/store/useUser';
-import { Login } from './features/auth/components/Login';
-import { Books } from './features/books/Books';
+import Books from './features/books/Books';
 import DailyTransactions from './features/dailyRequests/DailyTransactions';
-
-// Placeholder components (we'll build these next)
-function Dashboard() {
-  return <div className="p-6"><Login /></div>;
-}
-
-
-
+import Dashboard from './features/dashboard/Dashboard';
+import Authors from './features/authors/Authors';
+import Translators from './features/translators/Translators';
+import Publishers from './features/publishers/Publishers';
+import UsersPage from './features/users/Users';
 
 function App() {
   const { user } = useUser();
@@ -32,44 +28,34 @@ function App() {
         theme="light"
       />
 
-      {user && <Navbar />}
+      <div className="flex min-h-screen">
+        {/* Sidebar */}
+        {user && <Sidebar />}
 
-      <main className={user ? 'bg-gray-50 min-h-[calc(100vh-64px)]' : ''}>
-        <Routes>
-          {/* Public Routes */}
-          <Route
-            path="/login"
-            element={user ? <Navigate to="/dashboard" replace /> : <Auth />}
-          />
+        {/* Main Content */}
+        <main className="flex-1 bg-gray-50 overflow-auto">
+          <Routes>
+            {/* Public Routes */}
+            <Route
+              path="/login"
+              element={user ? <Navigate to="/dashboard" replace /> : <Auth />}
+            />
 
-          {/* Protected Routes */}
-          <Route
-            path="/transactions"
-            element={
-              <ProtectedRoute>
-                <DailyTransactions />
-              </ProtectedRoute>
-            }
-          />
+            {/* Protected Routes */}
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/transactions" element={<ProtectedRoute><DailyTransactions /></ProtectedRoute>} />
+            <Route path="/books" element={<ProtectedRoute><Books /></ProtectedRoute>} />
+            <Route path="/authors" element={<ProtectedRoute><Authors /></ProtectedRoute>} />
+            <Route path="/translators" element={<ProtectedRoute><Translators /></ProtectedRoute>} />
+            <Route path="/publishers" element={<ProtectedRoute><Publishers /></ProtectedRoute>} />
+            <Route path="/users" element={<ProtectedRoute requireAdmin><UsersPage /></ProtectedRoute>} />
 
-          <Route
-            path="/books"
-            element={
-              <ProtectedRoute>
-                <Books />
-              </ProtectedRoute>
-            }
-          />
-
-
-
-
-
-          {/* Fallback */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </main>
+            {/* Fallback */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </main>
+      </div>
     </BrowserRouter>
   );
 }

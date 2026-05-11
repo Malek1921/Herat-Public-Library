@@ -19,7 +19,7 @@ export function Auth() {
                             : 'text-gray-600 hover:text-gray-900'
                             }`}
                     >
-                        🔓 ورود
+                        ورود
                     </button>
                     {isAdmin() && (
                         <button

@@ -22,7 +22,7 @@ export function Login() {
       const { token, user } = response.data;
 
       setUser(user, token);
-      toast.success('✅ خوش آمدید! ' + user.username);
+      toast.success(' خوش آمدید! ' + user.username);
       navigate('/dashboard');
     } catch (err) {
       const message = err.response?.data?.error || 'خطا در ورود';
@@ -37,7 +37,7 @@ export function Login() {
   return (
     <div className="w-full max-w-md space-y-8">
       <div className="text-center">
-        <h2 className="text-3xl font-bold text-gray-900">📚 کتابخانه</h2>
+        <h2 className="text-3xl font-bold text-gray-900"> کتابخانه</h2>
         <p className="mt-2 text-sm text-gray-600">سیستم مدیریت کتابخانه</p>
       </div>
 
@@ -45,7 +45,7 @@ export function Login() {
         {/* Email */}
         <div>
           <label className="block text-sm font-medium text-gray-700 text-right mb-2">
-            📧 ایمیل
+            ایمیل
           </label>
           <div className="relative">
             <Mail className="absolute right-3 top-3 text-gray-400" size={20} />
@@ -71,7 +71,7 @@ export function Login() {
         {/* Password */}
         <div>
           <label className="block text-sm font-medium text-gray-700 text-right mb-2">
-            🔐 رمز عبور
+            رمز عبور
           </label>
           <div className="relative">
             <Lock className="absolute right-3 top-3 text-gray-400" size={20} />

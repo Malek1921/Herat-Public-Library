@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const pool   = require('../config/pool');
+const pool = require('../config/pool');
 const { authenticate } = require('../middlewares/auth.middleware');
 
 // ── GET /api/books  (search, filter, paginate)
@@ -15,15 +15,15 @@ router.get('/', authenticate, async (req, res, next) => {
     const sortDir = order === 'desc' ? 'DESC' : 'ASC';
 
     const conditions = [];
-    const params     = [];
-    let   idx        = 1;
+    const params = [];
+    let idx = 1;
 
     if (q) {
       conditions.push(`(b.title ILIKE $${idx} OR b.isbn ILIKE $${idx})`);
       params.push(`%${q}%`); idx++;
     }
     if (category_id) { conditions.push(`b.category_id = $${idx}`); params.push(category_id); idx++; }
-    if (subject_id)  { conditions.push(`b.subject_id  = $${idx}`); params.push(subject_id);  idx++; }
+    if (subject_id) { conditions.push(`b.subject_id  = $${idx}`); params.push(subject_id); idx++; }
     if (language_id) { conditions.push(`b.language_id = $${idx}`); params.push(language_id); idx++; }
     if (author_id) {
       conditions.push(`EXISTS (SELECT 1 FROM book_authors ba WHERE ba.book_id = b.id AND ba.author_id = $${idx})`);
@@ -48,7 +48,9 @@ router.get('/', authenticate, async (req, res, next) => {
          p.name                                    AS publisher,
          p.city                                    AS publisher_city,
          ARRAY_AGG(DISTINCT a.full_name)           AS authors,
+         ARRAY_AGG(DISTINCT a.id)                  AS author_ids,
          ARRAY_AGG(DISTINCT t.full_name)           AS translators,
+         ARRAY_AGG(DISTINCT t.id)                  AS translator_ids,
          COUNT(DISTINCT cp.id)                     AS copy_count
        FROM books b
        LEFT JOIN languages   l  ON l.id  = b.language_id
@@ -71,20 +73,22 @@ router.get('/', authenticate, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── GET /api/books/:id
+// ── GET /api/books/:id  (single book with IDs)
 router.get('/:id', authenticate, async (req, res, next) => {
   try {
     const { rows } = await pool.query(
       `SELECT
          b.*,
-         l.name                          AS language,
-         c.name                          AS category,
-         s.name                          AS subject,
+         l.name                           AS language,
+         c.name                           AS category,
+         s.name                           AS subject,
          s.dewey_number,
-         p.name                          AS publisher,
-         p.city                          AS publisher_city,
-         ARRAY_AGG(DISTINCT a.full_name) AS authors,
-         ARRAY_AGG(DISTINCT t.full_name) AS translators
+         p.name                           AS publisher,
+         p.city                           AS publisher_city,
+         ARRAY_AGG(DISTINCT a.full_name)  AS authors,
+         ARRAY_AGG(DISTINCT a.id)         AS author_ids,
+         ARRAY_AGG(DISTINCT t.full_name)  AS translators,
+         ARRAY_AGG(DISTINCT t.id)         AS translator_ids
        FROM books b
        LEFT JOIN languages   l  ON l.id  = b.language_id
        LEFT JOIN categories  c  ON c.id  = b.category_id
@@ -129,9 +133,9 @@ router.post('/', authenticate, async (req, res, next) => {
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
          RETURNING *`,
         [title, edition, volume_type, page_count, isbn,
-         unit_price, total_price, publication_year,
-         series_count, volume_count, keywords, notes, details,
-         language_id, category_id, subject_id, publisher_id]
+          unit_price, total_price, publication_year,
+          series_count, volume_count, keywords, notes, details,
+          language_id, category_id, subject_id, publisher_id]
       );
       const book = rows[0];
 
@@ -197,10 +201,10 @@ router.put('/:id', authenticate, async (req, res, next) => {
          WHERE id = $18
          RETURNING *`,
         [title, edition, volume_type, page_count, isbn,
-         unit_price, total_price, publication_year,
-         series_count, volume_count, keywords, notes, details,
-         language_id, category_id, subject_id, publisher_id,
-         req.params.id]
+          unit_price, total_price, publication_year,
+          series_count, volume_count, keywords, notes, details,
+          language_id, category_id, subject_id, publisher_id,
+          req.params.id]
       );
       if (!rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Book not found.' }); }
 
